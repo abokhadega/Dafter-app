@@ -4,106 +4,116 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>الدفتر</title>
-    <!-- PWA Manifest مدمج -->
     <link rel="manifest" id="manifest-placeholder">
     <meta name="theme-color" content="#2c3e50">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
-        :root { --p: #2c3e50; --d: #e74c3c; --c: #27ae60; --bg: #f4f6f8; --card: #fff; --t: #2d3436; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; -webkit-tap-highlight-color: transparent; }
+        :root { 
+            --p: #2c3e50; --d: #e74c3c; --c: #27ae60; 
+            --bg: #f4f6f8; --card: #fff; --t: #2d3436; --border: #e8e8e8; 
+        }
+        [data-theme="dark"] { 
+            --bg: #1a1a1a; --card: #2d2d2d; --t: #ecf0f1; --border: #444; --p: #34495e; 
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; -webkit-tap-highlight-color: transparent; transition: background 0.3s, color 0.3s; }
         body { background: var(--bg); color: var(--t); font-size: 17px; padding-bottom: 40px; }
 
-        /* الهيدر والقائمة */
+        /* === الهيدر والقائمة الاحترافية === */
         header { background: var(--p); color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
         h1 { font-size: 1.5rem; }
         .balances { display: flex; gap: 10px; }
         .bal { width: 85px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; color: #fff; }
         .b-d { background: var(--d); } .b-c { background: var(--c); }
         
-        .settings-btn { background: none; border: none; color: #fff; font-size: 1.8rem; cursor: pointer; position: relative; }
-        .dropdown { position: absolute; left: 0; top: 45px; background: #fff; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); width: 220px; display: none; overflow: hidden; z-index: 200; }
-        .dropdown.show { display: block; }
-        .dropdown button { width: 100%; padding: 15px; border: none; background: none; text-align: right; font-size: 1.1rem; cursor: pointer; border-bottom: 1px solid #eee; color: var(--t); }
+        .menu-btn { background: none; border: none; color: #fff; font-size: 2rem; cursor: pointer; line-height: 0.5; letter-spacing: 2px; }
+        .dropdown { position: absolute; left: 15px; top: 55px; background: var(--card); border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); width: 260px; display: none; overflow: hidden; z-index: 200; border: 1px solid var(--border); }
+        .dropdown.show { display: block; animation: slideDown 0.2s ease; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .dropdown button { width: 100%; padding: 16px; border: none; background: none; text-align: right; font-size: 1.05rem; cursor: pointer; border-bottom: 1px solid var(--border); color: var(--t); display: flex; align-items: center; gap: 10px; }
         .dropdown button:last-child { border: none; }
-        .dropdown button:hover { background: #f8f9fa; }
+        .dropdown button:hover { background: rgba(0,0,0,0.05); }
 
-        /* النموذج */
+        /* === النموذج وحقل البيان === */
         .form-card { background: var(--card); margin: 15px; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); position: relative; }
         .name-wrap { position: relative; margin-bottom: 12px; }
-        .name-wrap input { width: 100%; padding: 14px 16px; border: 2px solid #e8e8e8; border-radius: 10px; font-size: 1.15rem; outline: none; }
-        .name-wrap input:focus { border-color: var(--p); }
+        input, textarea { width: 100%; padding: 14px 16px; border: 2px solid var(--border); border-radius: 10px; font-size: 1.15rem; outline: none; background: var(--card); color: var(--t); }
+        input:focus, textarea:focus { border-color: var(--p); }
+        textarea { resize: vertical; min-height: 60px; max-height: 120px; margin-bottom: 12px; font-family: inherit; }
         
-        /* الاقتراحات */
-        .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 2px solid #e8e8e8; border-top: none; border-radius: 0 0 10px 10px; max-height: 200px; overflow-y: auto; z-index: 50; display: none; }
-        .suggestions div { padding: 12px 16px; cursor: pointer; font-size: 1.1rem; border-bottom: 1px solid #f0f0f0; }
-        .suggestions div:hover, .suggestions div.active { background: #f0f8ff; color: var(--p); font-weight: bold; }
+        .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: var(--card); border: 2px solid var(--border); border-top: none; border-radius: 0 0 10px 10px; max-height: 200px; overflow-y: auto; z-index: 50; display: none; }
+        .suggestions div { padding: 12px 16px; cursor: pointer; font-size: 1.1rem; border-bottom: 1px solid var(--border); }
+        .suggestions div:hover { background: rgba(44,62,80,0.1); color: var(--p); font-weight: bold; }
 
-        /* سطر المبلغ مع الزر المدمج وضبط الاتجاه */
-        .amount-row { display: flex; gap: 0; margin-bottom: 12px; direction: ltr; /* LTR لمنع عكس الأرقام */ }
-        .type-toggle { 
-            width: 100px; border: 2px solid #e8e8e8; border-radius: 10px 0 0 10px; 
-            font-size: 1.1rem; font-weight: bold; cursor: pointer; color: #fff; 
-            display: flex; align-items: center; justify-content: center; transition: all 0.3s; 
-            direction: rtl; /* إرجاع النص للعربية داخل الزر */
-        }
+        .amount-row { display: flex; gap: 0; margin-bottom: 12px; direction: ltr; }
+        .type-toggle { width: 100px; border: 2px solid var(--border); border-radius: 10px 0 0 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; color: #fff; display: flex; align-items: center; justify-content: center; direction: rtl; }
         .type-toggle.debit { background: var(--d); border-color: var(--d); }
         .type-toggle.credit { background: var(--c); border-color: var(--c); }
-        .amount-row input { flex: 1; margin: 0; border-radius: 0 10px 10px 0; border-left: none; border: 2px solid #e8e8e8; padding: 14px; font-size: 1.15rem; outline: none; text-align: center; }
+        .amount-row input { flex: 1; margin: 0; border-radius: 0 10px 10px 0; border-left: none; text-align: center; }
 
-        .actions-row { display: flex; gap: 10px; }
-        .save-btn { flex: 1; padding: 16px; background: var(--p); color: #fff; border: none; border-radius: 10px; font-size: 1.3rem; font-weight: bold; cursor: pointer; }
+        .save-btn { width: 100%; padding: 16px; background: var(--p); color: #fff; border: none; border-radius: 10px; font-size: 1.3rem; font-weight: bold; cursor: pointer; }
 
-        /* البحث وكشف الحساب */
+        /* === البحث وكشف الحساب === */
         .search-wrap { padding: 0 15px; margin-bottom: 15px; }
-        .search-input { background: #fff; border: 2px solid #ddd; border-radius: 50px; padding: 14px 24px; width: 100%; font-size: 1.15rem; outline: none; }
+        .search-input { background: var(--card); border: 2px solid var(--border); border-radius: 50px; padding: 14px 24px; width: 100%; font-size: 1.15rem; }
         
         .statement { margin: 0 15px 15px; background: var(--card); border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); overflow: hidden; display: none; }
         .stmt-head { background: var(--p); color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
         .stmt-head h2 { font-size: 1.3rem; }
         .net-badge { font-size: 1rem; font-weight: bold; padding: 5px 12px; border-radius: 6px; color: #fff; }
         
-        .stmt-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-        .stmt-table th { background: #f8f9fa; padding: 10px; text-align: right; color: #666; border-bottom: 2px solid #eee; }
-        .stmt-table td { padding: 12px 10px; border-bottom: 1px solid #f0f0f0; }
+        .stmt-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .stmt-table th { background: rgba(0,0,0,0.03); padding: 10px 8px; text-align: right; color: #888; border-bottom: 2px solid var(--border); }
+        .stmt-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
         .td-d { color: var(--d); font-weight: bold; } .td-c { color: var(--c); font-weight: bold; }
+        .desc-cell { font-size: 0.85rem; color: #888; margin-top: 3px; line-height: 1.4; word-break: break-word; }
 
         .stmt-actions { display: flex; gap: 10px; padding: 15px; }
         .wa-btn, .pdf-btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-align: center; color: #fff; }
         .wa-btn { background: #25D366; } .pdf-btn { background: #34495e; }
 
-        /* القائمة */
+        /* === القائمة === */
         .list-title { padding: 10px 20px; font-size: 1rem; color: #888; font-weight: bold; }
         .tx-item { background: var(--card); margin: 0 15px 10px; padding: 14px 18px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border-right: 5px solid #ccc; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .tx-item.debit { border-right-color: var(--d); } .tx-item.credit { border-right-color: var(--c); }
         .tx-name { font-size: 1.15rem; font-weight: bold; } .tx-date { font-size: 0.85rem; color: #999; margin-top: 2px; }
+        .tx-desc { font-size: 0.85rem; color: #888; margin-top: 2px; }
         .tx-amount { font-size: 1.25rem; font-weight: 800; margin-left: 10px; direction: ltr; }
         .tx-amount.debit { color: var(--d); } .tx-amount.credit { color: var(--c); }
-        .act-btn { background: none; border: none; font-size: 1.2rem; opacity: 0.6; cursor: pointer; padding: 5px; }
+        .act-btn { background: none; border: none; font-size: 1.2rem; opacity: 0.6; cursor: pointer; padding: 5px; color: var(--t); }
         .empty { text-align: center; padding: 40px; color: #aaa; font-size: 1.1rem; }
 
-        /* المودالات */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal { background: #fff; border-radius: 16px; padding: 25px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
-        .modal h3 { margin-bottom: 15px; font-size: 1.3rem; text-align: center; }
-        .modal input { width: 100%; padding: 14px; margin-bottom: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 1.1rem; outline: none; text-align: center; }
-        .modal-btns { display: flex; gap: 10px; margin-top: 15px; }
+        /* === الصفحات العائمة والمودالات === */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(3px); }
+        .modal { background: var(--card); border-radius: 16px; padding: 25px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; }
+        .modal h3 { margin-bottom: 20px; font-size: 1.3rem; text-align: center; }
+        .modal p { line-height: 1.8; font-size: 1rem; color: var(--t); margin-bottom: 10px; }
+        .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
         .modal-btns button { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; color: #fff; }
         .btn-primary { background: var(--p); } .btn-cancel { background: #95a5a6; }
         .btn-export { background: #8e44ad; width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; color: #fff; margin-bottom: 10px; }
-        .btn-import { background: #2980b9; width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; color: #fff; }
+        .btn-import { background: #2980b9; width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; color: #fff; margin-bottom: 10px; }
+        .btn-gdrive { background: #1a73e8; width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; color: #fff; margin-bottom: 10px; }
         .file-input { display: none; }
 
-        /* طباعة PDF */
+        /* === طباعة PDF المضبوطة === */
         @media print {
-            body * { visibility: hidden; }
-            .statement, .statement * { visibility: visible; }
-            .statement { position: absolute; left: 0; top: 0; width: 100%; margin: 0; box-shadow: none; border-radius: 0; }
+            @page { margin: 5mm; size: A4 portrait; }
+            body * { visibility: hidden !important; }
+            .statement, .statement * { visibility: visible !important; }
+            .statement { 
+                position: absolute !important; left: 0 !important; top: 0 !important; 
+                width: 100% !important; margin: 0 !important; padding: 0 !important;
+                box-shadow: none !important; border-radius: 0 !important; 
+                display: block !important; overflow: visible !important;
+            }
             .stmt-actions { display: none !important; }
-            .stmt-head { background: #2c3e50 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .net-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .td-d { color: #e74c3c !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .td-c { color: #27ae60 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .stmt-head { background: #2c3e50 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; padding: 10px 15px !important; }
+            .stmt-table { font-size: 11pt !important; page-break-inside: avoid; }
+            .stmt-table th, .stmt-table td { padding: 8px !important; border: 1px solid #ddd !important; }
+            .td-d { color: #e74c3c !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .td-c { color: #27ae60 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .net-badge { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .desc-cell { font-size: 9pt !important; }
         }
     </style>
 </head>
@@ -115,10 +125,16 @@
         <div class="bal b-d" id="totDebit">0</div>
         <div class="bal b-c" id="totCredit">0</div>
     </div>
-    <button class="settings-btn" onclick="toggleSettings()">⚙️
-        <div class="dropdown" id="settingsDropdown">
-            <button onclick="openProfileModal()">👤 إعدادات الحساب</button>
-            <button onclick="openBackupModal()">💾 النسخ الاحتياطي</button>
+    <button class="menu-btn" onclick="toggleMenu()">⋮
+        <div class="dropdown" id="menuDropdown">
+            <button onclick="openModal('profileModal')">👤 إعدادات الحساب</button>
+            <button onclick="openModal('backupModal')">💾 نسخة احتياطية (الهاتف)</button>
+            <button onclick="openModal('gdriveModal')">☁️ جوجل درايف</button>
+            <button onclick="toggleTheme()">🌙 الوضع الليلي / النهاري</button>
+            <button onclick="installPWA()">📲 تثبيت التطبيق</button>
+            <button onclick="openModal('clientsModal')">📋 قائمة العملاء</button>
+            <button onclick="openModal('policyModal')">🔒 السياسة والخصوصية</button>
+            <button onclick="openModal('termsModal')">📄 شروط الاستخدام</button>
         </div>
     </button>
 </header>
@@ -128,13 +144,12 @@
         <input type="text" id="nameInput" placeholder="✏️ اسم العميل" autocomplete="off" oninput="showSuggestions(this.value)" onfocus="showSuggestions(this.value)">
         <div class="suggestions" id="suggestionsBox"></div>
     </div>
+    <textarea id="descInput" placeholder="📝 بيان العملية (اختياري)"></textarea>
     <div class="amount-row">
         <div class="type-toggle debit" id="typeToggle" onclick="toggleType()">مدين</div>
         <input type="number" id="amountInput" placeholder="المبلغ" inputmode="numeric">
     </div>
-    <div class="actions-row">
-        <button class="save-btn" onclick="addTx()">حفظ ✓</button>
-    </div>
+    <button class="save-btn" onclick="addTx()">حفظ ✓</button>
 </div>
 
 <div class="search-wrap">
@@ -159,12 +174,12 @@
 <div class="list-title" id="listTitle">آخر العمليات</div>
 <div id="listContainer"></div>
 
-<!-- مودال الإعدادات -->
+<!-- === المودالات === -->
 <div class="modal-overlay" id="profileModal">
     <div class="modal">
         <h3>👤 إعدادات الحساب</h3>
         <input type="email" id="profEmail" placeholder="📧 البريد الإلكتروني">
-        <input type="tel" id="profPhone" placeholder="📱 رقم الهاتف مع كود الدولة (مثال: 201xxxxxxxxx)" inputmode="tel">
+        <input type="tel" id="profPhone" placeholder="📱 رقمك مع كود الدولة (مثال: 201xxxxxxxxx)" inputmode="tel">
         <div class="modal-btns">
             <button class="btn-primary" onclick="saveProfile()">حفظ</button>
             <button class="btn-cancel" onclick="closeModal('profileModal')">إلغاء</button>
@@ -172,25 +187,63 @@
     </div>
 </div>
 
-<!-- مودال النسخ الاحتياطي -->
 <div class="modal-overlay" id="backupModal">
     <div class="modal">
-        <h3>💾 النسخ الاحتياطي</h3>
-        <button class="btn-export" onclick="exportBackup()">📤 تصدير نسخة (JSON)</button>
+        <h3>💾 نسخة احتياطية على الهاتف</h3>
+        <button class="btn-export" onclick="exportBackup()">📤 تصدير نسخة JSON</button>
         <button class="btn-import" onclick="document.getElementById('importFile').click()">📥 استيراد نسخة</button>
         <input type="file" id="importFile" class="file-input" accept=".json" onchange="importBackup(this)">
         <div class="modal-btns"><button class="btn-cancel" onclick="closeModal('backupModal')">إغلاق</button></div>
     </div>
 </div>
 
-<!-- مودال التعديل -->
+<div class="modal-overlay" id="gdriveModal">
+    <div class="modal">
+        <h3>☁️ جوجل درايف</h3>
+        <p style="text-align:center;">لحفظ نسخة على جوجل درايف:<br>1. اضغط "تصدير نسخة"<br>2. اختر "Drive" من خيارات المشاركة<br>3. لحفظ تلقائي يحتاج ربط API (يتوفر قريباً)</p>
+        <button class="btn-gdrive" onclick="exportBackup(); closeModal('gdriveModal')">📤 تصدير ورفع يدوياً</button>
+        <div class="modal-btns"><button class="btn-cancel" onclick="closeModal('gdriveModal')">إغلاق</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="clientsModal">
+    <div class="modal">
+        <h3>📋 قائمة العملاء</h3>
+        <div id="clientsList" style="max-height:60vh;overflow-y:auto;"></div>
+        <div class="modal-btns"><button class="btn-cancel" onclick="closeModal('clientsModal')">إغلاق</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="policyModal">
+    <div class="modal">
+        <h3>🔒 سياسة الخصوصية</h3>
+        <p>• جميع بياناتك مخزنة محلياً على جهازك فقط.</p>
+        <p>• لا يتم إرسال أي بيانات لخوادم خارجية.</p>
+        <p>• النسخ الاحتياطي مسؤوليتك الشخصية.</p>
+        <p>• التطبيق يعمل بدون إنترنت بالكامل.</p>
+        <div class="modal-btns"><button class="btn-cancel" onclick="closeModal('policyModal')">فهمت</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="termsModal">
+    <div class="modal">
+        <h3>📄 شروط الاستخدام</h3>
+        <p>• التطبيق مجاني للاستخدام الشخصي والتجاري.</p>
+        <p>• المستخدم مسؤول عن دقة البيانات المدخلة.</p>
+        <p>• لا يتحمل المطور مسؤولية فقدان البيانات.</p>
+        <p>• يُمنع إعادة بيع التطبيق دون إذن.</p>
+        <div class="modal-btns"><button class="btn-cancel" onclick="closeModal('termsModal')">فهمت</button></div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="editModal">
     <div class="modal">
         <h3>✏️ تعديل العملية</h3>
         <input type="text" id="editName" placeholder="الاسم">
+        <textarea id="editDesc" placeholder="البيان"></textarea>
         <div class="amount-row" style="direction:ltr;">
             <div class="type-toggle debit" id="editTypeToggle" onclick="toggleEditType()" style="direction:rtl;">مدين</div>
-            <input type="number" id="editAmount" placeholder="المبلغ" inputmode="numeric" style="border-radius:0 10px 10px 0;border-left:none;border:2px solid #eee;padding:14px;font-size:1.1rem;text-align:center;">
+            <input type="number" id="editAmount" placeholder="المبلغ" inputmode="numeric" style="border-radius:0 10px 10px 0;border-left:none;text-align:center;">
         </div>
         <div class="modal-btns">
             <button class="btn-primary" onclick="confirmEdit()">حفظ التعديل</button>
@@ -200,101 +253,141 @@
 </div>
 
 <script>
-    // === PWA Setup (مدمج في ملف واحد) ===
+    // === PWA Setup ===
     const manifest = {
         name: "الدفتر", short_name: "الدفتر", start_url: ".", display: "standalone",
         background_color: "#f4f6f8", theme_color: "#2c3e50", orientation: "any",
         icons: [{ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232c3e50'/><text x='50' y='68' font-size='60' text-anchor='middle' fill='white'>📒</text></svg>", sizes: "192x192", type: "image/svg+xml" }]
     };
-    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-    document.getElementById('manifest-placeholder').href = URL.createObjectURL(blob);
+    document.getElementById('manifest-placeholder').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
+    
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; });
 
     if ('serviceWorker' in navigator) {
-        const swCode = `self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('activate', e => e.waitUntil(clients.claim())); self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));`;
-        const swBlob = new Blob([swCode], { type: 'application/javascript' });
-        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+        const sw = `self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(clients.claim()));self.addEventListener('fetch',e=>e.respondWith(fetch(e.request).catch(()=>caches.match(e.request))));`;
+        navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw], { type: 'application/javascript' }))).catch(() => {});
     }
 
-    // === البيانات والمتغيرات ===
+    // === البيانات ===
     let profile = JSON.parse(localStorage.getItem('df_profile')) || {};
     let txs = JSON.parse(localStorage.getItem('df_txs')) || [];
     let curType = 'debit', editId = null, editType = 'debit', currentClient = '';
+    let isDark = localStorage.getItem('df_theme') === 'dark';
+    if (isDark) document.documentElement.setAttribute('data-theme', 'dark');
 
     document.addEventListener('DOMContentLoaded', renderAll);
     document.addEventListener('click', e => {
-        if (!e.target.closest('.settings-btn')) document.getElementById('settingsDropdown').classList.remove('show');
+        if (!e.target.closest('.menu-btn')) document.getElementById('menuDropdown').classList.remove('show');
         if (!e.target.closest('.name-wrap')) document.getElementById('suggestionsBox').style.display = 'none';
     });
 
-    // === القائمة والإعدادات ===
-    function toggleSettings() { document.getElementById('settingsDropdown').classList.toggle('show'); }
-    function openProfileModal() {
-        document.getElementById('profEmail').value = profile.email || '';
-        document.getElementById('profPhone').value = profile.phone || '';
-        document.getElementById('profileModal').style.display = 'flex';
-        document.getElementById('settingsDropdown').classList.remove('show');
+    // === القائمة ===
+    function toggleMenu() { document.getElementById('menuDropdown').classList.toggle('show'); }
+    function openModal(id) { 
+        document.getElementById(id).style.display = 'flex'; 
+        document.getElementById('menuDropdown').classList.remove('show');
+        if (id === 'profileModal') {
+            document.getElementById('profEmail').value = profile.email || '';
+            document.getElementById('profPhone').value = profile.phone || '';
+        }
+        if (id === 'clientsModal') renderClientsList();
     }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // === الإعدادات ===
     function saveProfile() {
         const email = document.getElementById('profEmail').value.trim();
         const phone = document.getElementById('profPhone').value.trim().replace(/[^0-9]/g, '');
-        if (!phone) return alert('⚠️ أدخل رقم الهاتف على الأقل');
+        if (!phone) return alert('⚠️ أدخل رقم الهاتف');
         profile = { email, phone };
         localStorage.setItem('df_profile', JSON.stringify(profile));
-        closeModal('profileModal'); alert('✅ تم حفظ الإعدادات');
+        closeModal('profileModal'); alert('✅ تم الحفظ');
     }
-    function openBackupModal() { document.getElementById('backupModal').style.display = 'flex'; document.getElementById('settingsDropdown').classList.remove('show'); }
 
-    // === التبديل بين مدين/دائن ===
+    function toggleTheme() {
+        isDark = !isDark;
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        localStorage.setItem('df_theme', isDark ? 'dark' : 'light');
+        document.querySelector('[name="theme-color"]').content = isDark ? '#34495e' : '#2c3e50';
+    }
+
+    async function installPWA() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            if (outcome === 'accepted') alert('✅ تم تثبيت التطبيق!');
+        } else {
+            alert('📲 لتثبيت التطبيق:\n• Android: ⋮ → تثبيت التطبيق\n• iOS: مشاركة → إضافة للشاشة الرئيسية');
+        }
+    }
+
+    function renderClientsList() {
+        const names = [...new Set(txs.map(t => t.name))].sort();
+        const el = document.getElementById('clientsList');
+        if (!names.length) { el.innerHTML = '<div class="empty">لا يوجد عملاء بعد</div>'; return; }
+        el.innerHTML = names.map(n => `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:1.1rem;" onclick="closeModal('clientsModal');document.getElementById('searchInput').value='${n}';handleSearch();">${n}</div>`).join('');
+    }
+
+    // === التبديل ===
     function toggleType() { curType = curType === 'debit' ? 'credit' : 'debit'; updateBtn('typeToggle', curType); }
     function toggleEditType() { editType = editType === 'debit' ? 'credit' : 'debit'; updateBtn('editTypeToggle', editType); }
     function updateBtn(id, type) { const b = document.getElementById(id); b.className = `type-toggle ${type}`; b.textContent = type === 'debit' ? 'مدين' : 'دائن'; }
 
-    // === الاقتراحات الذكية ===
+    // === الاقتراحات ===
     function showSuggestions(val) {
         const box = document.getElementById('suggestionsBox');
         if (!val.trim()) { box.style.display = 'none'; return; }
-        const uniqueNames = [...new Set(txs.map(t => t.name))];
-        const matches = uniqueNames.filter(n => n.toLowerCase().startsWith(val.toLowerCase()));
-        if (matches.length === 0) { box.style.display = 'none'; return; }
+        const matches = [...new Set(txs.map(t => t.name))].filter(n => n.toLowerCase().startsWith(val.toLowerCase()));
+        if (!matches.length) { box.style.display = 'none'; return; }
         box.innerHTML = matches.map(n => `<div onclick="selectSuggestion('${n.replace(/'/g, "\\'")}')">${n}</div>`).join('');
         box.style.display = 'block';
     }
     function selectSuggestion(name) {
         document.getElementById('nameInput').value = name;
         document.getElementById('suggestionsBox').style.display = 'none';
-        document.getElementById('amountInput').focus();
+        document.getElementById('descInput').focus();
     }
 
-    // === إضافة / تعديل / حذف ===
+    // === CRUD ===
     function addTx() {
         const name = document.getElementById('nameInput').value.trim();
+        const desc = document.getElementById('descInput').value.trim();
         const amount = parseFloat(document.getElementById('amountInput').value);
         if (!name || isNaN(amount) || amount <= 0) return alert('⚠️ أدخل الاسم والمبلغ');
-        txs.unshift({ id: Date.now(), name, amount, type: curType, date: new Date().toLocaleDateString('ar-EG') });
-        save(); document.getElementById('nameInput').value = ''; document.getElementById('amountInput').value = '';
+        txs.unshift({ id: Date.now(), name, desc, amount, type: curType, date: new Date().toLocaleDateString('ar-EG') });
+        save();
+        document.getElementById('nameInput').value = '';
+        document.getElementById('descInput').value = '';
+        document.getElementById('amountInput').value = '';
         document.getElementById('nameInput').focus();
         if (document.getElementById('searchInput').value.trim()) handleSearch();
     }
+
     function openEdit(id) {
         const tx = txs.find(t => t.id === id); if (!tx) return;
         editId = id; editType = tx.type;
         document.getElementById('editName').value = tx.name;
+        document.getElementById('editDesc').value = tx.desc || '';
         document.getElementById('editAmount').value = tx.amount;
         updateBtn('editTypeToggle', editType);
         document.getElementById('editModal').style.display = 'flex';
     }
+
     function confirmEdit() {
         const name = document.getElementById('editName').value.trim();
+        const desc = document.getElementById('editDesc').value.trim();
         const amount = parseFloat(document.getElementById('editAmount').value);
         if (!name || isNaN(amount) || amount <= 0) return alert('⚠️ بيانات غير صحيحة');
         const idx = txs.findIndex(t => t.id === editId);
-        if (idx > -1) { txs[idx] = { ...txs[idx], name, amount, type: editType }; save(); closeModal('editModal'); if (document.getElementById('searchInput').value.trim()) handleSearch(); }
+        if (idx > -1) { txs[idx] = { ...txs[idx], name, desc, amount, type: editType }; save(); closeModal('editModal'); if (document.getElementById('searchInput').value.trim()) handleSearch(); }
     }
+
     function deleteTx(id) { if (!confirm('حذف؟')) return; txs = txs.filter(t => t.id !== id); save(); if (document.getElementById('searchInput').value.trim()) handleSearch(); }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function save() { localStorage.setItem('df_txs', JSON.stringify(txs)); renderAll(); }
 
-    // === البحث وكشف الحساب ===
+    // === البحث ===
     function handleSearch() {
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
         const card = document.getElementById('statementCard');
@@ -304,7 +397,11 @@
         currentClient = matched[0].name;
         const cTxs = txs.filter(t => t.name.toLowerCase() === currentClient.toLowerCase());
         let d = 0, c = 0, rows = '';
-        cTxs.forEach(t => { const isD = t.type === 'debit'; if (isD) d += t.amount; else c += t.amount; rows += `<tr><td>${t.date}</td><td>${isD?'مدين':'دائن'}</td><td class="${isD?'td-d':''}">${isD?t.amount.toLocaleString('ar-EG'):'-'}</td><td class="${!isD?'td-c':''}">${!isD?t.amount.toLocaleString('ar-EG'):'-'}</td></tr>`; });
+        cTxs.forEach(t => {
+            const isD = t.type === 'debit'; if (isD) d += t.amount; else c += t.amount;
+            const descHtml = t.desc ? `<div class="desc-cell">${t.desc}</div>` : '';
+            rows += `<tr><td>${t.date}</td><td>${isD?'مدين':'دائن'}${descHtml}</td><td class="${isD?'td-d':''}">${isD?t.amount.toLocaleString('ar-EG'):'-'}</td><td class="${!isD?'td-c':''}">${!isD?t.amount.toLocaleString('ar-EG'):'-'}</td></tr>`;
+        });
         const net = d - c;
         const ne = document.getElementById('stmtNet');
         document.getElementById('stmtName').textContent = currentClient;
@@ -315,31 +412,51 @@
         card.style.display = 'block'; document.getElementById('listTitle').textContent = `عمليات ${currentClient}`; renderList(cTxs);
     }
 
-    // === واتساب ===
+    // === واتساب الذكي (Double Check) ===
     function shareWA() {
         if (!currentClient) return;
-        if (!profile.phone) { alert('⚠️ سجّل رقم هاتفك من الإعدادات أولاً'); openProfileModal(); return; }
+        
+        // التحقق من رقم صاحب التطبيق
+        if (!profile.phone) { 
+            alert('⚠️ يجب تسجيل رقم هاتفك أولاً'); 
+            openModal('profileModal'); 
+            return; 
+        }
+
+        // البحث عن رقم العميل (لو محفوظ في البيان أو نطلبه)
+        // حالياً نتحقق من رقم المرسل فقط ونرسل له
+        // لو عايز رقم العميل نخزنه مع بيانات العميل
+        
         const cTxs = txs.filter(t => t.name.toLowerCase() === currentClient.toLowerCase());
         let d = 0, c = 0, msg = `📒 *كشف حساب: ${currentClient}*\n📅 ${new Date().toLocaleDateString('ar-EG')}\n━━━━━━━━━━━━\n`;
-        cTxs.forEach(t => { msg += `${t.date} | ${t.type==='debit'?'مدين':'دائن'}: ${t.amount.toLocaleString('ar-EG')}\n`; if (t.type==='debit') d+=t.amount; else c+=t.amount; });
+        cTxs.forEach(t => { 
+            const descLine = t.desc ? ` (${t.desc})` : '';
+            msg += `${t.date} | ${t.type==='debit'?'مدين':'دائن'}: ${t.amount.toLocaleString('ar-EG')}${descLine}\n`; 
+            if (t.type==='debit') d+=t.amount; else c+=t.amount; 
+        });
         const net = d - c; const lbl = net>0?'مدين':net<0?'دائن':'تسوية';
         msg += `━━━━━━━━━━━━\n💰 الصافي: ${Math.abs(net).toLocaleString('ar-EG')} (${lbl})`;
+        
         window.open(`https://wa.me/${profile.phone}?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
     // === النسخ الاحتياطي ===
     function exportBackup() {
         const data = { profile, transactions: txs, date: new Date().toISOString() };
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
         a.download = `دفتر_${new Date().toLocaleDateString('ar-EG')}.json`; a.click();
     }
     function importBackup(input) {
         const file = input.files[0]; if (!file) return;
         const r = new FileReader(); r.onload = e => {
-            try { const d = JSON.parse(e.target.result); if (!d.transactions) return alert('⚠️ ملف غير صالح');
+            try { 
+                const d = JSON.parse(e.target.result); 
+                if (!d.transactions) return alert('⚠️ ملف غير صالح');
                 if (!confirm(`استبدال ${txs.length} عملية بـ ${d.transactions.length} عملية؟`)) return;
-                txs = d.transactions; if (d.profile) { profile = d.profile; localStorage.setItem('df_profile', JSON.stringify(profile)); }
-                save(); closeModal('backupModal'); alert('✅ تم الاستيراد بنجاح');
+                txs = d.transactions; 
+                if (d.profile) { profile = d.profile; localStorage.setItem('df_profile', JSON.stringify(profile)); }
+                save(); closeModal('backupModal'); alert('✅ تم الاستيراد');
             } catch { alert('⚠️ خطأ في الملف'); }
         }; r.readAsText(file); input.value = '';
     }
@@ -355,7 +472,10 @@
     function renderList(items) {
         const el = document.getElementById('listContainer');
         if (!items.length) { el.innerHTML = '<div class="empty">لا توجد عمليات ✍️</div>'; return; }
-        el.innerHTML = items.map(t => `<div class="tx-item ${t.type}"><div><div class="tx-name">${t.name}</div><div class="tx-date">${t.date}</div></div><div style="display:flex;align-items:center;"><span class="tx-amount ${t.type}">${t.amount.toLocaleString('ar-EG')}</span><button class="act-btn" onclick="openEdit(${t.id})">✏️</button><button class="act-btn" onclick="deleteTx(${t.id})">🗑️</button></div></div>`).join('');
+        el.innerHTML = items.map(t => {
+            const descHtml = t.desc ? `<div class="tx-desc">📝 ${t.desc}</div>` : '';
+            return `<div class="tx-item ${t.type}"><div><div class="tx-name">${t.name}</div><div class="tx-date">${t.date}</div>${descHtml}</div><div style="display:flex;align-items:center;"><span class="tx-amount ${t.type}">${t.amount.toLocaleString('ar-EG')}</span><button class="act-btn" onclick="openEdit(${t.id})">✏️</button><button class="act-btn" onclick="deleteTx(${t.id})">🗑️</button></div></div>`;
+        }).join('');
     }
 </script>
 </body>
