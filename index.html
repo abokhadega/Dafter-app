@@ -47,7 +47,8 @@
             width: 85px; height: 40px; border-radius: 8px; 
             display: flex; align-items: center; justify-content: center;
             font-weight: bold; font-size: 1rem; color: white;
-        }        .bal-debit { background: var(--debit); }
+        }
+        .bal-debit { background: var(--debit); }
         .bal-credit { background: var(--credit); }
 
         .form-card { background: var(--card); margin: 15px; padding: 20px; border-radius: 16px; box-shadow: var(--shadow); }
@@ -96,7 +97,8 @@
         }
 
         .list-title { padding: 10px 20px; font-size: 1rem; color: #888; font-weight: bold; }
-        .tx-item {            background: var(--card); margin: 0 15px 10px; padding: 14px 18px; border-radius: 12px;
+        .tx-item {
+            background: var(--card); margin: 0 15px 10px; padding: 14px 18px; border-radius: 12px;
             display: flex; justify-content: space-between; align-items: center;
             border-right: 5px solid #ccc; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
         }
@@ -145,7 +147,8 @@
     <header>
         <h1>📒 الدفتر</h1>
         <div class="balances">
-            <div class="bal-box bal-debit" id="totDebit">0</div>            <div class="bal-box bal-credit" id="totCredit">0</div>
+            <div class="bal-box bal-debit" id="totDebit">0</div>
+            <div class="bal-box bal-credit" id="totCredit">0</div>
         </div>
     </header>
 
@@ -194,7 +197,8 @@
             <button class="btn-confirm" onclick="confirmEdit()">حفظ التعديل</button>
             <button class="btn-cancel" onclick="closeModal('editModal')">إلغاء</button>
         </div>
-    </div></div>
+    </div>
+</div>
 
 <!-- نافذة النسخ الاحتياطي -->
 <div class="modal-overlay" id="backupModal">
@@ -243,7 +247,8 @@
     // === التبديل بين مدين/دائن ===
     function toggleType() {
         curType = curType === 'debit' ? 'credit' : 'debit';
-        updateTypeBtn('typeToggle', curType);    }
+        updateTypeBtn('typeToggle', curType);
+    }
     function toggleEditType() {
         editType = editType === 'debit' ? 'credit' : 'debit';
         updateTypeBtn('editTypeToggle', editType);
@@ -292,6 +297,7 @@
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
     function save() { localStorage.setItem('ledger_final', JSON.stringify(txs)); renderAll(); }
+
     // === البحث الذكي ===
     function handleSearch() {
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -341,7 +347,8 @@
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = `دفتر_نسخة_احتياطية_${new Date().toLocaleDateString('ar-EG')}.json`;        a.click(); URL.revokeObjectURL(url);
+        a.href = url; a.download = `دفتر_نسخة_احتياطية_${new Date().toLocaleDateString('ar-EG')}.json`;
+        a.click(); URL.revokeObjectURL(url);
     }
     function importBackup(input) {
         const file = input.files[0]; if (!file) return;
@@ -386,3 +393,4 @@
 </script>
 </body>
 </html>
+
