@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>الدفتر</title>
-    <link rel="manifest" id="manifest-placeholder">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="theme-color" content="#2c3e50">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="الدفتر">
     <style>
         :root { 
             --p: #2c3e50; --d: #e74c3c; --c: #27ae60; 
@@ -42,6 +44,7 @@
         .name-wrap { position: relative; margin-bottom: 12px; }
         input, textarea { width: 100%; padding: 14px 16px; border: 2px solid var(--border); border-radius: 10px; font-size: 1.15rem; outline: none; background: var(--card); color: var(--t); }
         input:focus, textarea:focus { border-color: var(--p); }
+        input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-height: 52px; }
         textarea { resize: vertical; min-height: 60px; max-height: 120px; margin-bottom: 12px; font-family: inherit; }
         
         .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: var(--card); border: 2px solid var(--border); border-top: none; border-radius: 0 0 10px 10px; max-height: 200px; overflow-y: auto; z-index: 50; display: none; }
@@ -69,7 +72,7 @@
         .stmt-table th { background: rgba(0,0,0,0.03); padding: 10px 8px; text-align: right; color: #888; border-bottom: 2px solid var(--border); }
         .stmt-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
         .td-d { color: var(--d); font-weight: bold; } .td-c { color: var(--c); font-weight: bold; }
-        .desc-cell { font-size: 0.85rem; color: #888; margin-top: 3px; line-height: 1.4; word-break: break-word; }
+        .desc-cell { display: inline-block; font-size: 0.85rem; color: #888; line-height: 1.4; word-break: break-word; }
 
         .stmt-actions { display: flex; gap: 10px; padding: 15px; }
         .wa-btn, .pdf-btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-align: center; color: #fff; }
@@ -102,13 +105,13 @@
         /* === طباعة PDF المضبوطة === */
         @media print {
             @page { margin: 5mm; size: A4 portrait; }
-            body * { visibility: hidden !important; }
-            .statement, .statement * { visibility: visible !important; }
+            html, body { height: auto !important; background: #fff !important; }
+            body > *:not(.statement) { display: none !important; }
             .statement { 
-                position: absolute !important; left: 0 !important; top: 0 !important; 
+                display: block !important; position: static !important;
                 width: 100% !important; margin: 0 !important; padding: 0 !important;
                 box-shadow: none !important; border-radius: 0 !important; 
-                display: block !important; overflow: visible !important;
+                overflow: visible !important;
             }
             .stmt-actions { display: none !important; }
             .stmt-head { background: #2c3e50 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; padding: 10px 15px !important; }
@@ -264,19 +267,11 @@
 
 <script>
     // === PWA Setup ===
-    const manifest = {
-        name: "الدفتر", short_name: "الدفتر", start_url: ".", display: "standalone",
-        background_color: "#f4f6f8", theme_color: "#2c3e50", orientation: "any",
-        icons: [{ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232c3e50'/><text x='50' y='68' font-size='60' text-anchor='middle' fill='white'>📒</text></svg>", sizes: "192x192", type: "image/svg+xml" }]
-    };
-    document.getElementById('manifest-placeholder').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
-    
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; });
 
     if ('serviceWorker' in navigator) {
-        const sw = `self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(clients.claim()));self.addEventListener('fetch',e=>e.respondWith(fetch(e.request).catch(()=>caches.match(e.request))));`;
-        navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw], { type: 'application/javascript' }))).catch(() => {});
+        navigator.serviceWorker.register('sw.js').catch(() => {});
     }
 
     // === البيانات ===
@@ -341,13 +336,14 @@
     }
 
     async function installPWA() {
+        toggleMenu();
         if (deferredPrompt) {
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
             deferredPrompt = null;
             if (outcome === 'accepted') alert('✅ تم تثبيت التطبيق!');
         } else {
-            alert('📲 لتثبيت التطبيق:\n• Android: ⋮ → تثبيت التطبيق\n• iOS: مشاركة → إضافة للشاشة الرئيسية');
+            alert('📲 لتثبيت التطبيق:\n\n• Android (Chrome): افتح قائمة المتصفح ⋮ (فوق يمين الشاشة) → اختر "تثبيت التطبيق" أو "إضافة إلى الشاشة الرئيسية"\n\n• iPhone (Safari): اضغط زر المشاركة 📤 → "إضافة إلى الشاشة الرئيسية"\n\nملاحظة: لو فتحت الموقع من رابط مختصر (bit.ly) أو من متصفح غير Chrome/Safari، خيار التثبيت الفوري ممكن ما يظهرش — افتح الرابط الأصلي في Chrome مباشرة.');
         }
     }
 
@@ -458,8 +454,8 @@
         }
         cTxs.forEach(t => {
             const isD = t.type === 'debit'; if (isD) d += t.amount; else c += t.amount;
-            const descHtml = t.desc ? `<div class="desc-cell">${t.desc}</div>` : '';
-            rows += `<tr><td>${fmtDate(t.date)}</td><td>${isD?'مدين':'دائن'}${descHtml}</td><td class="${isD?'td-d':''}">${isD?t.amount.toLocaleString('ar-EG'):'-'}</td><td class="${!isD?'td-c':''}">${!isD?t.amount.toLocaleString('ar-EG'):'-'}</td></tr>`;
+            const descHtml = t.desc ? `<br><span class="desc-cell">📝 ${t.desc}</span>` : '';
+            rows += `<tr><td>${fmtDate(t.date)}</td><td><b class="${isD?'td-d':'td-c'}">${isD?'مدين':'دائن'}</b>${descHtml}</td><td class="${isD?'td-d':''}">${isD?t.amount.toLocaleString('ar-EG'):'-'}</td><td class="${!isD?'td-c':''}">${!isD?t.amount.toLocaleString('ar-EG'):'-'}</td></tr>`;
         });
         const net = d - c;
         const ne = document.getElementById('stmtNet');
