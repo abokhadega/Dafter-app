@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>الدفتر</title>
+    <style>
+        :root {
+            --primary: #2c3e50; --debit: #e74c3c; --credit: #27ae60;
+            --bg: #f4f6f8; --card: #fff; --text: #2d3436;
+            --shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: var(--text); font-size: 17px; min-height: 100vh; }
+
+        /* === شاشة الملف الشخصي === */
+        .profile-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--primary); z-index: 999; display: flex;
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .profile-card {
+            background: white; border-radius: 20px; padding: 30px; width: 100%; max-width: 400px;
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .profile-card h2 { margin-bottom: 25px; color: var(--primary); }
+        .profile-card input {
+            width: 100%; padding: 15px; margin-bottom: 12px; border: 2px solid #eee;
+            border-radius: 12px; font-size: 1.1rem; outline: none; text-align: center;
+        }
+        .profile-card input:focus { border-color: var(--primary); }
+        .start-btn {
+            width: 100%; padding: 16px; background: var(--primary); color: white;
+            border: none; border-radius: 12px; font-size: 1.3rem; font-weight: bold; cursor: pointer; margin-top: 10px;
+        }
+        .hidden { display: none !important; }
+
+        /* === التطبيق الرئيسي === */
+        header {
+            background: var(--primary); color: white; padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100;
+        }
+        h1 { font-size: 1.5rem; }
+        .balances { display: flex; gap: 10px; }
+        .bal-box { 
+            width: 85px; height: 40px; border-radius: 8px; 
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 1rem; color: white;
+        }        .bal-debit { background: var(--debit); }
+        .bal-credit { background: var(--credit); }
+
+        .form-card { background: var(--card); margin: 15px; padding: 20px; border-radius: 16px; box-shadow: var(--shadow); }
+        
+        /* حقل المبلغ مع الزر المدمج */
+        .amount-row { display: flex; gap: 0; margin-bottom: 12px; }
+        .amount-row input { 
+            flex: 1; margin-bottom: 0; border-radius: 0 10px 10px 0; border-right: none; 
+        }
+        .type-toggle {
+            width: 100px; border: 2px solid #e8e8e8; border-radius: 10px 0 0 10px;
+            font-size: 1.1rem; font-weight: bold; cursor: pointer; color: white;
+            display: flex; align-items: center; justify-content: center; transition: all 0.3s;
+        }
+        .type-toggle.debit { background: var(--debit); border-color: var(--debit); }
+        .type-toggle.credit { background: var(--credit); border-color: var(--credit); }
+
+        input {
+            width: 100%; padding: 14px 16px; margin-bottom: 12px;
+            border: 2px solid #e8e8e8; border-radius: 10px; font-size: 1.15rem; outline: none;
+        }
+        input:focus { border-color: var(--primary); }
+
+        .actions-row { display: flex; gap: 10px; margin-top: 10px; }
+        .save-btn { flex: 2; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 1.3rem; font-weight: bold; cursor: pointer; }
+        .backup-btn { flex: 1; padding: 16px; background: #8e44ad; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+
+        .search-wrap { padding: 0 15px; margin-bottom: 15px; }
+        .search-input { background: white; border: 2px solid #ddd; border-radius: 50px; padding: 14px 24px; width: 100%; font-size: 1.15rem; }
+
+        .client-statement { margin: 0 15px 15px; background: var(--card); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; display: none; }
+        .statement-header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .statement-header h2 { font-size: 1.3rem; }
+        .net-badge { font-size: 1rem; font-weight: bold; padding: 5px 12px; border-radius: 6px; color: white; }
+        
+        .stmt-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+        .stmt-table th { background: #f8f9fa; padding: 10px; text-align: right; color: #666; border-bottom: 2px solid #eee; }
+        .stmt-table td { padding: 12px 10px; border-bottom: 1px solid #f0f0f0; }
+        .td-d { color: var(--debit); font-weight: bold; }
+        .td-c { color: var(--credit); font-weight: bold; }
+
+        .wa-btn {
+            display: block; width: calc(100% - 30px); margin: 10px auto 15px; padding: 12px;
+            background: #25D366; color: white; border: none; border-radius: 10px;
+            font-size: 1.1rem; font-weight: bold; cursor: pointer; text-align: center;
+        }
+
+        .list-title { padding: 10px 20px; font-size: 1rem; color: #888; font-weight: bold; }
+        .tx-item {            background: var(--card); margin: 0 15px 10px; padding: 14px 18px; border-radius: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-right: 5px solid #ccc; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .tx-item.debit { border-right-color: var(--debit); }
+        .tx-item.credit { border-right-color: var(--credit); }
+        .tx-name { font-size: 1.15rem; font-weight: bold; }
+        .tx-date { font-size: 0.85rem; color: #999; margin-top: 2px; }
+        .tx-amount { font-size: 1.25rem; font-weight: 800; margin-left: 10px; }
+        .tx-amount.debit { color: var(--debit); }
+        .tx-amount.credit { color: var(--credit); }
+        .tx-actions { display: flex; gap: 8px; }
+        .act-btn { background: none; border: none; font-size: 1.2rem; opacity: 0.6; cursor: pointer; padding: 5px; }
+        .empty { text-align: center; padding: 40px; color: #aaa; font-size: 1.1rem; }
+
+        /* نافذة التعديل والنسخ الاحتياطي */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 200; display: none;
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal { background: white; border-radius: 16px; padding: 25px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
+        .modal h3 { margin-bottom: 15px; font-size: 1.3rem; text-align: center; }
+        .modal-btns { display: flex; gap: 10px; margin-top: 15px; }
+        .modal-btns button { flex: 1; padding: 14px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; color: white; }
+        .btn-confirm { background: var(--primary); }
+        .btn-cancel { background: #95a5a6; }
+        .btn-export { background: #8e44ad; margin-bottom: 10px; }
+        .btn-import { background: #2980b9; }
+        .file-input { display: none; }
+    </style>
+</head>
+<body>
+
+<!-- شاشة الملف الشخصي -->
+<div class="profile-screen" id="profileScreen">
+    <div class="profile-card">
+        <h2>👤 إعداد الدفتر</h2>
+        <input type="email" id="userEmail" placeholder="📧 البريد الإلكتروني (للنسخ الاحتياطي)">
+        <input type="tel" id="userPhone" placeholder="📱 رقم الهاتف مع كود الدولة (مثال: 201xxxxxxxxx)" inputmode="tel">
+        <button class="start-btn" onclick="saveProfile()">حفظ وبدء الاستخدام ✓</button>
+    </div>
+</div>
+
+<!-- التطبيق الرئيسي -->
+<div id="appContent" class="hidden">
+    <header>
+        <h1>📒 الدفتر</h1>
+        <div class="balances">
+            <div class="bal-box bal-debit" id="totDebit">0</div>            <div class="bal-box bal-credit" id="totCredit">0</div>
+        </div>
+    </header>
+
+    <div class="form-card">
+        <input type="text" id="nameInput" placeholder="✏️ اسم العميل" autocomplete="off">
+        <div class="amount-row">
+            <div class="type-toggle debit" id="typeToggle" onclick="toggleType()">مدين</div>
+            <input type="number" id="amountInput" placeholder="💰 المبلغ" inputmode="numeric" style="border-radius: 0 10px 10px 0;">
+        </div>
+        <div class="actions-row">
+            <button class="save-btn" onclick="addTx()">حفظ ✓</button>
+            <button class="backup-btn" onclick="openBackupModal()">💾 نسخ</button>
+        </div>
+    </div>
+
+    <div class="search-wrap">
+        <input type="text" class="search-input" id="searchInput" placeholder="🔍 ابحث باسم العميل..." oninput="handleSearch()">
+    </div>
+
+    <div class="client-statement" id="statementCard">
+        <div class="statement-header">
+            <h2 id="stmtName"></h2>
+            <span class="net-badge" id="stmtNet"></span>
+        </div>
+        <table class="stmt-table">
+            <thead><tr><th>التاريخ</th><th>البيان</th><th>مدين</th><th>دائن</th></tr></thead>
+            <tbody id="stmtBody"></tbody>
+        </table>
+        <button class="wa-btn" id="waBtn" onclick="shareStatement()">📤 إرسال كشف الحساب واتساب</button>
+    </div>
+
+    <div class="list-title" id="listTitle">آخر العمليات</div>
+    <div id="listContainer"></div>
+</div>
+
+<!-- نافذة التعديل -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <h3>✏️ تعديل العملية</h3>
+        <input type="text" id="editName" placeholder="الاسم">
+        <div class="amount-row">
+            <div class="type-toggle debit" id="editTypeToggle" onclick="toggleEditType()">مدين</div>
+            <input type="number" id="editAmount" placeholder="المبلغ" inputmode="numeric" style="border-radius: 0 10px 10px 0;">
+        </div>
+        <div class="modal-btns">
+            <button class="btn-confirm" onclick="confirmEdit()">حفظ التعديل</button>
+            <button class="btn-cancel" onclick="closeModal('editModal')">إلغاء</button>
+        </div>
+    </div></div>
+
+<!-- نافذة النسخ الاحتياطي -->
+<div class="modal-overlay" id="backupModal">
+    <div class="modal">
+        <h3>💾 النسخ الاحتياطي</h3>
+        <p style="text-align:center;margin-bottom:15px;color:#666;font-size:0.95rem;">
+            صدّر نسخة على جهازك أو جوجل درايف،<br>أو استورد نسخة سابقة
+        </p>
+        <button class="modal-btns btn-export" style="width:100%;padding:14px;border:none;border-radius:10px;font-size:1.1rem;font-weight:bold;cursor:pointer;color:white;background:#8e44ad;margin-bottom:10px;" onclick="exportBackup()">📤 تصدير نسخة احتياطية</button>
+        <button class="modal-btns btn-import" style="width:100%;padding:14px;border:none;border-radius:10px;font-size:1.1rem;font-weight:bold;cursor:pointer;color:white;background:#2980b9;" onclick="document.getElementById('importFile').click()">📥 استيراد نسخة احتياطية</button>
+        <input type="file" id="importFile" class="file-input" accept=".json" onchange="importBackup(this)">
+        <div class="modal-btns" style="margin-top:15px;">
+            <button class="btn-cancel" onclick="closeModal('backupModal')">إغلاق</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // === إدارة الملف الشخصي ===
+    let userProfile = JSON.parse(localStorage.getItem('ledger_profile')) || null;
+    let txs = JSON.parse(localStorage.getItem('ledger_final')) || [];
+    let curType = 'debit';
+    let editId = null;
+    let editType = 'debit';
+    let currentSearchClient = '';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (userProfile && userProfile.email && userProfile.phone) {
+            document.getElementById('profileScreen').classList.add('hidden');
+            document.getElementById('appContent').classList.remove('hidden');
+            renderAll();
+        }
+    });
+
+    function saveProfile() {
+        const email = document.getElementById('userEmail').value.trim();
+        const phone = document.getElementById('userPhone').value.trim().replace(/[^0-9]/g, '');
+        if (!email || !phone || phone.length < 8) return alert('⚠️ أدخل بريد إلكتروني ورقم هاتف صحيح مع كود الدولة');
+        userProfile = { email, phone };
+        localStorage.setItem('ledger_profile', JSON.stringify(userProfile));
+        document.getElementById('profileScreen').classList.add('hidden');
+        document.getElementById('appContent').classList.remove('hidden');
+        renderAll();
+    }
+
+    // === التبديل بين مدين/دائن ===
+    function toggleType() {
+        curType = curType === 'debit' ? 'credit' : 'debit';
+        updateTypeBtn('typeToggle', curType);    }
+    function toggleEditType() {
+        editType = editType === 'debit' ? 'credit' : 'debit';
+        updateTypeBtn('editTypeToggle', editType);
+    }
+    function updateTypeBtn(btnId, type) {
+        const btn = document.getElementById(btnId);
+        btn.className = `type-toggle ${type}`;
+        btn.textContent = type === 'debit' ? 'مدين' : 'دائن';
+    }
+
+    // === إضافة عملية ===
+    function addTx() {
+        const name = document.getElementById('nameInput').value.trim();
+        const amount = parseFloat(document.getElementById('amountInput').value);
+        if (!name || isNaN(amount) || amount <= 0) return alert('⚠️ أدخل الاسم والمبلغ');
+        txs.unshift({ id: Date.now(), name, amount, type: curType, date: new Date().toLocaleDateString('ar-EG') });
+        save();
+        document.getElementById('nameInput').value = '';
+        document.getElementById('amountInput').value = '';
+        document.getElementById('nameInput').focus();
+        if (document.getElementById('searchInput').value.trim()) handleSearch();
+    }
+
+    // === التعديل والحذف ===
+    function openEdit(id) {
+        const tx = txs.find(t => t.id === id);
+        if (!tx) return;
+        editId = id; editType = tx.type;
+        document.getElementById('editName').value = tx.name;
+        document.getElementById('editAmount').value = tx.amount;
+        updateTypeBtn('editTypeToggle', editType);
+        document.getElementById('editModal').style.display = 'flex';
+    }
+    function confirmEdit() {
+        const name = document.getElementById('editName').value.trim();
+        const amount = parseFloat(document.getElementById('editAmount').value);
+        if (!name || isNaN(amount) || amount <= 0) return alert('⚠️ بيانات غير صحيحة');
+        const idx = txs.findIndex(t => t.id === editId);
+        if (idx > -1) { txs[idx] = { ...txs[idx], name, amount, type: editType }; save(); closeModal('editModal'); if (document.getElementById('searchInput').value.trim()) handleSearch(); }
+    }
+    function deleteTx(id) {
+        if (!confirm('حذف هذه العملية؟')) return;
+        txs = txs.filter(t => t.id !== id); save();
+        if (document.getElementById('searchInput').value.trim()) handleSearch();
+    }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    function save() { localStorage.setItem('ledger_final', JSON.stringify(txs)); renderAll(); }
+    // === البحث الذكي ===
+    function handleSearch() {
+        const q = document.getElementById('searchInput').value.trim().toLowerCase();
+        const card = document.getElementById('statementCard');
+        const listTitle = document.getElementById('listTitle');
+        if (!q) { card.style.display = 'none'; listTitle.textContent = 'آخر العمليات'; renderList(txs); currentSearchClient = ''; return; }
+        const matched = txs.filter(t => t.name.toLowerCase().startsWith(q));
+        if (matched.length === 0) { card.style.display = 'none'; listTitle.textContent = 'لا توجد نتائج'; renderList([]); currentSearchClient = ''; return; }
+        const clientName = matched[0].name;
+        const clientTxs = txs.filter(t => t.name.toLowerCase() === clientName.toLowerCase());
+        currentSearchClient = clientName;
+        let totalD = 0, totalC = 0, rows = '';
+        clientTxs.forEach(t => {
+            const isD = t.type === 'debit';
+            if (isD) totalD += t.amount; else totalC += t.amount;
+            rows += `<tr><td>${t.date}</td><td>${isD?'مدين':'دائن'}</td><td class="${isD?'td-d':''}">${isD?t.amount.toLocaleString('ar-EG'):'-'}</td><td class="${!isD?'td-c':''}">${!isD?t.amount.toLocaleString('ar-EG'):'-'}</td></tr>`;
+        });
+        const net = totalD - totalC;
+        const netEl = document.getElementById('stmtNet');
+        document.getElementById('stmtName').textContent = clientName;
+        document.getElementById('stmtBody').innerHTML = rows;
+        if (net > 0) { netEl.textContent = `صافي مدين: ${net.toLocaleString('ar-EG')}`; netEl.className = 'net-badge bal-debit'; }
+        else if (net < 0) { netEl.textContent = `صافي دائن: ${Math.abs(net).toLocaleString('ar-EG')}`; netEl.className = 'net-badge bal-credit'; }
+        else { netEl.textContent = 'الصافي: 0'; netEl.className = 'net-badge'; netEl.style.background = '#95a5a6'; }
+        card.style.display = 'block'; listTitle.textContent = `عمليات ${clientName}`; renderList(clientTxs);
+    }
+
+    // === واتساب برقم المستخدم ===
+    function shareStatement() {
+        if (!currentSearchClient || !userProfile) return;
+        const clientTxs = txs.filter(t => t.name.toLowerCase() === currentSearchClient.toLowerCase());
+        let d = 0, c = 0, msg = `📒 *كشف حساب: ${currentSearchClient}*\n📅 ${new Date().toLocaleDateString('ar-EG')}\n━━━━━━━━━━━━\n`;
+        clientTxs.forEach(t => {
+            msg += `${t.date} | ${t.type==='debit'?'مدين':'دائن'}: ${t.amount.toLocaleString('ar-EG')}\n`;
+            if (t.type==='debit') d+=t.amount; else c+=t.amount;
+        });
+        const net = d - c;
+        const lbl = net>0?'مدين':net<0?'دائن':'تسوية';
+        msg += `━━━━━━━━━━━━\n💰 الصافي: ${Math.abs(net).toLocaleString('ar-EG')} (${lbl})`;
+        window.open(`https://wa.me/${userProfile.phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    // === النسخ الاحتياطي ===
+    function openBackupModal() { document.getElementById('backupModal').style.display = 'flex'; }
+    function exportBackup() {
+        const data = { profile: userProfile, transactions: txs, exportDate: new Date().toISOString() };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `دفتر_نسخة_احتياطية_${new Date().toLocaleDateString('ar-EG')}.json`;        a.click(); URL.revokeObjectURL(url);
+    }
+    function importBackup(input) {
+        const file = input.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.transactions && Array.isArray(data.transactions)) {
+                    if (!confirm(`سيتم استبدال ${txs.length} عملية حالية بـ ${data.transactions.length} عملية من النسخة. متأكد؟`)) return;
+                    txs = data.transactions;
+                    if (data.profile) { userProfile = data.profile; localStorage.setItem('ledger_profile', JSON.stringify(userProfile)); }
+                    save(); closeModal('backupModal'); alert('✅ تم استيراد النسخة بنجاح');
+                } else { alert('⚠️ ملف غير صالح'); }
+            } catch(err) { alert('⚠️ خطأ في قراءة الملف'); }
+        };
+        reader.readAsText(file); input.value = '';
+    }
+
+    // === العرض ===
+    function renderAll() {
+        const d = txs.filter(t=>t.type==='debit').reduce((s,t)=>s+t.amount,0);
+        const c = txs.filter(t=>t.type==='credit').reduce((s,t)=>s+t.amount,0);
+        document.getElementById('totDebit').textContent = d.toLocaleString('ar-EG');
+        document.getElementById('totCredit').textContent = c.toLocaleString('ar-EG');
+        if (!document.getElementById('searchInput').value.trim()) renderList(txs);
+    }
+    function renderList(items) {
+        const el = document.getElementById('listContainer');
+        if (!items.length) { el.innerHTML = '<div class="empty">لا توجد عمليات ✍️</div>'; return; }
+        el.innerHTML = items.map(t => `
+            <div class="tx-item ${t.type}">
+                <div><div class="tx-name">${t.name}</div><div class="tx-date">${t.date}</div></div>
+                <div style="display:flex;align-items:center;">
+                    <span class="tx-amount ${t.type}">${t.amount.toLocaleString('ar-EG')}</span>
+                    <div class="tx-actions">
+                        <button class="act-btn" onclick="openEdit(${t.id})">✏️</button>
+                        <button class="act-btn" onclick="deleteTx(${t.id})">🗑️</button>
+                    </div>
+                </div>
+            </div>`).join('');
+    }
+</script>
+</body>
+</html>
