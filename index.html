@@ -25,8 +25,12 @@
         .bal { width: 85px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; color: #fff; }
         .b-d { background: var(--d); } .b-c { background: var(--c); }
         
+        /* === زر تغيير الوضع === */
+        .theme-btn { background: none; border: none; color: #fff; font-size: 1.8rem; cursor: pointer; padding: 5px; line-height: 1; }
+        .theme-btn:hover { transform: scale(1.1); }
+
         .menu-btn { background: none; border: none; color: #fff; font-size: 2rem; cursor: pointer; line-height: 0.5; letter-spacing: 2px; }
-        .dropdown { position: absolute; left: 15px; top: 55px; background: var(--card); border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); width: 260px; display: none; overflow: hidden; z-index: 200; border: 1px solid var(--border); }
+        .dropdown { position: absolute; right: 15px; top: 55px; background: var(--card); border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); width: 260px; display: none; overflow: hidden; z-index: 200; border: 1px solid var(--border); }
         .dropdown.show { display: block; animation: slideDown 0.2s ease; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .dropdown button { width: 100%; padding: 16px; border: none; background: none; text-align: right; font-size: 1.05rem; cursor: pointer; border-bottom: 1px solid var(--border); color: var(--t); display: flex; align-items: center; gap: 10px; }
@@ -120,23 +124,27 @@
 <body>
 
 <header>
-    <h1>📒 الدفتر</h1>
-    <div class="balances">
-        <div class="bal b-d" id="totDebit">0</div>
-        <div class="bal b-c" id="totCredit">0</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+        <button class="menu-btn" onclick="toggleMenu()" title="القائمة">⋮</button>
+        <h1>📒 الدفتر</h1>
     </div>
-    <button class="menu-btn" onclick="toggleMenu()">⋮
-        <div class="dropdown" id="menuDropdown">
-            <button onclick="openModal('profileModal')">👤 إعدادات الحساب</button>
-            <button onclick="openModal('backupModal')">💾 نسخة احتياطية (الهاتف)</button>
-            <button onclick="openModal('gdriveModal')">☁️ جوجل درايف</button>
-            <button onclick="toggleTheme()">🌙 الوضع الليلي / النهاري</button>
-            <button onclick="installPWA()">📲 تثبيت التطبيق</button>
-            <button onclick="openModal('clientsModal')">📋 قائمة العملاء</button>
-            <button onclick="openModal('policyModal')">🔒 السياسة والخصوصية</button>
-            <button onclick="openModal('termsModal')">📄 شروط الاستخدام</button>
+    <div style="display:flex;align-items:center;gap:10px;">
+        <div class="balances">
+            <div class="bal b-d" id="totDebit">0</div>
+            <div class="bal b-c" id="totCredit">0</div>
         </div>
-    </button>
+        <button class="theme-btn" onclick="toggleTheme()" title="تغيير الوضع">🌙</button>
+    </div>
+
+    <div class="dropdown" id="menuDropdown">
+        <button onclick="openModal('clientsModal')">📋 قائمة العملاء</button>
+        <button onclick="openModal('profileModal')">👤 إعدادات الحساب</button>
+        <button onclick="openModal('backupModal')">💾 نسخة احتياطية</button>
+        <button onclick="openModal('gdriveModal')">☁️ جوجل درايف</button>
+        <button onclick="installPWA()">📲 تثبيت التطبيق</button>
+        <button onclick="openModal('policyModal')">🔒 سياسة الخصوصية</button>
+        <button onclick="openModal('termsModal')">📄 شروط الاستخدام</button>
+    </div>
 </header>
 
 <div class="form-card">
@@ -145,6 +153,7 @@
         <div class="suggestions" id="suggestionsBox"></div>
     </div>
     <textarea id="descInput" placeholder="📝 بيان العملية (اختياري)"></textarea>
+    <input type="date" id="dateInput" style="margin-bottom:12px;">
     <div class="amount-row">
         <div class="type-toggle debit" id="typeToggle" onclick="toggleType()">مدين</div>
         <input type="number" id="amountInput" placeholder="المبلغ" inputmode="numeric">
@@ -241,6 +250,7 @@
         <h3>✏️ تعديل العملية</h3>
         <input type="text" id="editName" placeholder="الاسم">
         <textarea id="editDesc" placeholder="البيان"></textarea>
+        <input type="date" id="editDate" style="margin-bottom:12px;">
         <div class="amount-row" style="direction:ltr;">
             <div class="type-toggle debit" id="editTypeToggle" onclick="toggleEditType()" style="direction:rtl;">مدين</div>
             <input type="number" id="editAmount" placeholder="المبلغ" inputmode="numeric" style="border-radius:0 10px 10px 0;border-left:none;text-align:center;">
@@ -272,15 +282,31 @@
     // === البيانات ===
     let profile = JSON.parse(localStorage.getItem('df_profile')) || {};
     let txs = JSON.parse(localStorage.getItem('df_txs')) || [];
+    let balances = JSON.parse(localStorage.getItem('df_balances')) || {};
     let curType = 'debit', editId = null, editType = 'debit', currentClient = '';
     let isDark = localStorage.getItem('df_theme') === 'dark';
     if (isDark) document.documentElement.setAttribute('data-theme', 'dark');
 
-    document.addEventListener('DOMContentLoaded', renderAll);
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('dateInput').value = todayISO();
+        renderAll();
+    });
     document.addEventListener('click', e => {
         if (!e.target.closest('.menu-btn')) document.getElementById('menuDropdown').classList.remove('show');
         if (!e.target.closest('.name-wrap')) document.getElementById('suggestionsBox').style.display = 'none';
     });
+
+    function todayISO() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function fmtDate(val) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+            const [y,m,d] = val.split('-');
+            return new Date(+y, +m-1, +d).toLocaleDateString('ar-EG');
+        }
+        return val || '';
+    }
 
     // === القائمة ===
     function toggleMenu() { document.getElementById('menuDropdown').classList.toggle('show'); }
@@ -310,6 +336,8 @@
         document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
         localStorage.setItem('df_theme', isDark ? 'dark' : 'light');
         document.querySelector('[name="theme-color"]').content = isDark ? '#34495e' : '#2c3e50';
+        // تغيير أيقونة الزر
+        document.querySelector('.theme-btn').textContent = isDark ? '☀️' : '🌙';
     }
 
     async function installPWA() {
@@ -327,7 +355,29 @@
         const names = [...new Set(txs.map(t => t.name))].sort();
         const el = document.getElementById('clientsList');
         if (!names.length) { el.innerHTML = '<div class="empty">لا يوجد عملاء بعد</div>'; return; }
-        el.innerHTML = names.map(n => `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:1.1rem;" onclick="closeModal('clientsModal');document.getElementById('searchInput').value='${n}';handleSearch();">${n}</div>`).join('');
+        el.innerHTML = names.map(n => {
+            const ob = balances[n.toLowerCase()] || 0;
+            const obLabel = ob > 0 ? `رصيد سابق مدين ${ob.toLocaleString('ar-EG')}` : ob < 0 ? `رصيد سابق دائن ${Math.abs(ob).toLocaleString('ar-EG')}` : 'بدون رصيد سابق';
+            return `<div style="padding:12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <div style="cursor:pointer;flex:1;" onclick="closeModal('clientsModal');document.getElementById('searchInput').value='${n.replace(/'/g, "\\'")}';handleSearch();">
+                    <div style="font-size:1.1rem;font-weight:bold;">${n}</div>
+                    <div style="font-size:0.85rem;color:#888;">${obLabel}</div>
+                </div>
+                <button class="act-btn" onclick="editOpeningBalance('${n.replace(/'/g, "\\'")}')">✏️</button>
+            </div>`;
+        }).join('');
+    }
+
+    function editOpeningBalance(name) {
+        const current = balances[name.toLowerCase()] || 0;
+        const input = prompt(`الرصيد الافتتاحي لـ "${name}"\nرقم موجب = مدين، رقم سالب = دائن، أو 0 لحذفه`, current);
+        if (input === null) return;
+        const val = parseFloat(input);
+        if (isNaN(val)) return alert('⚠️ قيمة غير صحيحة');
+        if (val === 0) delete balances[name.toLowerCase()]; else balances[name.toLowerCase()] = val;
+        localStorage.setItem('df_balances', JSON.stringify(balances));
+        renderClientsList();
+        if (currentClient.toLowerCase() === name.toLowerCase()) handleSearch();
     }
 
     // === التبديل ===
@@ -339,7 +389,7 @@
     function showSuggestions(val) {
         const box = document.getElementById('suggestionsBox');
         if (!val.trim()) { box.style.display = 'none'; return; }
-        const matches = [...new Set(txs.map(t => t.name))].filter(n => n.toLowerCase().startsWith(val.toLowerCase()));
+        const matches = [...new Set(txs.map(t => t.name))].filter(n => n.toLowerCase().includes(val.toLowerCase()));
         if (!matches.length) { box.style.display = 'none'; return; }
         box.innerHTML = matches.map(n => `<div onclick="selectSuggestion('${n.replace(/'/g, "\\'")}')">${n}</div>`).join('');
         box.style.display = 'block';
@@ -355,12 +405,14 @@
         const name = document.getElementById('nameInput').value.trim();
         const desc = document.getElementById('descInput').value.trim();
         const amount = parseFloat(document.getElementById('amountInput').value);
+        const dateVal = document.getElementById('dateInput').value || todayISO();
         if (!name || isNaN(amount) || amount <= 0) return alert('⚠️ أدخل الاسم والمبلغ');
-        txs.unshift({ id: Date.now(), name, desc, amount, type: curType, date: new Date().toLocaleDateString('ar-EG') });
+        txs.unshift({ id: Date.now(), name, desc, amount, type: curType, date: dateVal });
         save();
         document.getElementById('nameInput').value = '';
         document.getElementById('descInput').value = '';
         document.getElementById('amountInput').value = '';
+        document.getElementById('dateInput').value = todayISO();
         document.getElementById('nameInput').focus();
         if (document.getElementById('searchInput').value.trim()) handleSearch();
     }
@@ -370,6 +422,7 @@
         editId = id; editType = tx.type;
         document.getElementById('editName').value = tx.name;
         document.getElementById('editDesc').value = tx.desc || '';
+        document.getElementById('editDate').value = /^\d{4}-\d{2}-\d{2}$/.test(tx.date) ? tx.date : todayISO();
         document.getElementById('editAmount').value = tx.amount;
         updateBtn('editTypeToggle', editType);
         document.getElementById('editModal').style.display = 'flex';
@@ -378,10 +431,11 @@
     function confirmEdit() {
         const name = document.getElementById('editName').value.trim();
         const desc = document.getElementById('editDesc').value.trim();
+        const date = document.getElementById('editDate').value || todayISO();
         const amount = parseFloat(document.getElementById('editAmount').value);
         if (!name || isNaN(amount) || amount <= 0) return alert('⚠️ بيانات غير صحيحة');
         const idx = txs.findIndex(t => t.id === editId);
-        if (idx > -1) { txs[idx] = { ...txs[idx], name, desc, amount, type: editType }; save(); closeModal('editModal'); if (document.getElementById('searchInput').value.trim()) handleSearch(); }
+        if (idx > -1) { txs[idx] = { ...txs[idx], name, desc, date, amount, type: editType }; save(); closeModal('editModal'); if (document.getElementById('searchInput').value.trim()) handleSearch(); }
     }
 
     function deleteTx(id) { if (!confirm('حذف؟')) return; txs = txs.filter(t => t.id !== id); save(); if (document.getElementById('searchInput').value.trim()) handleSearch(); }
@@ -392,15 +446,20 @@
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
         const card = document.getElementById('statementCard');
         if (!q) { card.style.display = 'none'; document.getElementById('listTitle').textContent = 'آخر العمليات'; renderList(txs); currentClient = ''; return; }
-        const matched = txs.filter(t => t.name.toLowerCase().startsWith(q));
+        const matched = txs.filter(t => t.name.toLowerCase().includes(q));
         if (!matched.length) { card.style.display = 'none'; document.getElementById('listTitle').textContent = 'لا توجد نتائج'; renderList([]); currentClient = ''; return; }
         currentClient = matched[0].name;
-        const cTxs = txs.filter(t => t.name.toLowerCase() === currentClient.toLowerCase());
-        let d = 0, c = 0, rows = '';
+        const cTxs = txs.filter(t => t.name.toLowerCase() === currentClient.toLowerCase())
+            .slice().sort((a,b) => (a.date||'').localeCompare(b.date||'') || a.id - b.id);
+        const opening = balances[currentClient.toLowerCase()] || 0;
+        let d = opening > 0 ? opening : 0, c = opening < 0 ? -opening : 0, rows = '';
+        if (opening !== 0) {
+            rows += `<tr><td>—</td><td>رصيد سابق</td><td class="${opening>0?'td-d':''}">${opening>0?Math.abs(opening).toLocaleString('ar-EG'):'-'}</td><td class="${opening<0?'td-c':''}">${opening<0?Math.abs(opening).toLocaleString('ar-EG'):'-'}</td></tr>`;
+        }
         cTxs.forEach(t => {
             const isD = t.type === 'debit'; if (isD) d += t.amount; else c += t.amount;
             const descHtml = t.desc ? `<div class="desc-cell">${t.desc}</div>` : '';
-            rows += `<tr><td>${t.date}</td><td>${isD?'مدين':'دائن'}${descHtml}</td><td class="${isD?'td-d':''}">${isD?t.amount.toLocaleString('ar-EG'):'-'}</td><td class="${!isD?'td-c':''}">${!isD?t.amount.toLocaleString('ar-EG'):'-'}</td></tr>`;
+            rows += `<tr><td>${fmtDate(t.date)}</td><td>${isD?'مدين':'دائن'}${descHtml}</td><td class="${isD?'td-d':''}">${isD?t.amount.toLocaleString('ar-EG'):'-'}</td><td class="${!isD?'td-c':''}">${!isD?t.amount.toLocaleString('ar-EG'):'-'}</td></tr>`;
         });
         const net = d - c;
         const ne = document.getElementById('stmtNet');
@@ -409,7 +468,7 @@
         if (net > 0) { ne.textContent = `صافي مدين: ${net.toLocaleString('ar-EG')}`; ne.className = 'net-badge b-d'; ne.style.background = ''; }
         else if (net < 0) { ne.textContent = `صافي دائن: ${Math.abs(net).toLocaleString('ar-EG')}`; ne.className = 'net-badge b-c'; ne.style.background = ''; }
         else { ne.textContent = 'الصافي: 0'; ne.className = 'net-badge'; ne.style.background = '#95a5a6'; }
-        card.style.display = 'block'; document.getElementById('listTitle').textContent = `عمليات ${currentClient}`; renderList(cTxs);
+        card.style.display = 'block'; document.getElementById('listTitle').textContent = `عمليات ${currentClient}`; renderList(cTxs.slice().reverse());
     }
 
     // === واتساب الذكي (Double Check) ===
@@ -423,15 +482,15 @@
             return; 
         }
 
-        // البحث عن رقم العميل (لو محفوظ في البيان أو نطلبه)
-        // حالياً نتحقق من رقم المرسل فقط ونرسل له
-        // لو عايز رقم العميل نخزنه مع بيانات العميل
-        
-        const cTxs = txs.filter(t => t.name.toLowerCase() === currentClient.toLowerCase());
-        let d = 0, c = 0, msg = `📒 *كشف حساب: ${currentClient}*\n📅 ${new Date().toLocaleDateString('ar-EG')}\n━━━━━━━━━━━━\n`;
+        const cTxs = txs.filter(t => t.name.toLowerCase() === currentClient.toLowerCase())
+            .slice().sort((a,b) => (a.date||'').localeCompare(b.date||'') || a.id - b.id);
+        const opening = balances[currentClient.toLowerCase()] || 0;
+        let d = opening > 0 ? opening : 0, c = opening < 0 ? -opening : 0;
+        let msg = `📒 *كشف حساب: ${currentClient}*\n📅 ${new Date().toLocaleDateString('ar-EG')}\n━━━━━━━━━━━━\n`;
+        if (opening !== 0) msg += `رصيد سابق: ${Math.abs(opening).toLocaleString('ar-EG')} (${opening>0?'مدين':'دائن'})\n`;
         cTxs.forEach(t => { 
             const descLine = t.desc ? ` (${t.desc})` : '';
-            msg += `${t.date} | ${t.type==='debit'?'مدين':'دائن'}: ${t.amount.toLocaleString('ar-EG')}${descLine}\n`; 
+            msg += `${fmtDate(t.date)} | ${t.type==='debit'?'مدين':'دائن'}: ${t.amount.toLocaleString('ar-EG')}${descLine}\n`; 
             if (t.type==='debit') d+=t.amount; else c+=t.amount; 
         });
         const net = d - c; const lbl = net>0?'مدين':net<0?'دائن':'تسوية';
@@ -442,7 +501,7 @@
 
     // === النسخ الاحتياطي ===
     function exportBackup() {
-        const data = { profile, transactions: txs, date: new Date().toISOString() };
+        const data = { profile, transactions: txs, balances, date: new Date().toISOString() };
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
         a.download = `دفتر_${new Date().toLocaleDateString('ar-EG')}.json`; a.click();
@@ -456,6 +515,7 @@
                 if (!confirm(`استبدال ${txs.length} عملية بـ ${d.transactions.length} عملية؟`)) return;
                 txs = d.transactions; 
                 if (d.profile) { profile = d.profile; localStorage.setItem('df_profile', JSON.stringify(profile)); }
+                if (d.balances) { balances = d.balances; localStorage.setItem('df_balances', JSON.stringify(balances)); }
                 save(); closeModal('backupModal'); alert('✅ تم الاستيراد');
             } catch { alert('⚠️ خطأ في الملف'); }
         }; r.readAsText(file); input.value = '';
@@ -467,14 +527,19 @@
         const c = txs.filter(t=>t.type==='credit').reduce((s,t)=>s+t.amount,0);
         document.getElementById('totDebit').textContent = d.toLocaleString('ar-EG');
         document.getElementById('totCredit').textContent = c.toLocaleString('ar-EG');
-        if (!document.getElementById('searchInput').value.trim()) renderList(txs);
+        if (!document.getElementById('searchInput').value.trim()) {
+            const sorted = txs.slice().sort((a,b) => (b.date||'').localeCompare(a.date||'') || b.id - a.id);
+            renderList(sorted);
+        }
+        // تحديث أيقونة الوضع عند التحميل
+        document.querySelector('.theme-btn').textContent = isDark ? '☀️' : '🌙';
     }
     function renderList(items) {
         const el = document.getElementById('listContainer');
         if (!items.length) { el.innerHTML = '<div class="empty">لا توجد عمليات ✍️</div>'; return; }
         el.innerHTML = items.map(t => {
             const descHtml = t.desc ? `<div class="tx-desc">📝 ${t.desc}</div>` : '';
-            return `<div class="tx-item ${t.type}"><div><div class="tx-name">${t.name}</div><div class="tx-date">${t.date}</div>${descHtml}</div><div style="display:flex;align-items:center;"><span class="tx-amount ${t.type}">${t.amount.toLocaleString('ar-EG')}</span><button class="act-btn" onclick="openEdit(${t.id})">✏️</button><button class="act-btn" onclick="deleteTx(${t.id})">🗑️</button></div></div>`;
+            return `<div class="tx-item ${t.type}"><div><div class="tx-name">${t.name}</div><div class="tx-date">${fmtDate(t.date)}</div>${descHtml}</div><div style="display:flex;align-items:center;"><span class="tx-amount ${t.type}">${t.amount.toLocaleString('ar-EG')}</span><button class="act-btn" onclick="openEdit(${t.id})">✏️</button><button class="act-btn" onclick="deleteTx(${t.id})">🗑️</button></div></div>`;
         }).join('');
     }
 </script>
