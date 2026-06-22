@@ -60,11 +60,17 @@
         .save-btn { width: 100%; padding: 16px; background: var(--p); color: #fff; border: none; border-radius: 10px; font-size: 1.3rem; font-weight: bold; cursor: pointer; }
 
         /* === البحث وكشف الحساب === */
-        .search-wrap { padding: 0 15px; margin-bottom: 15px; }
+        .search-wrap { padding: 10px 15px 0; margin-bottom: 15px; }
         .search-input { background: var(--card); border: 2px solid var(--border); border-radius: 50px; padding: 14px 24px; width: 100%; font-size: 1.15rem; }
+        .search-icon-btn { flex: 0 0 58px; background: var(--card); border: 2px solid var(--border); border-radius: 14px; font-size: 1.4rem; color: var(--t); cursor: pointer; }
+        .search-icon-btn.active { background: var(--p); border-color: var(--p); color: #fff; }
         
-        .statement { margin: 0 15px 15px; background: var(--card); border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); overflow: hidden; display: none; }
-        .stmt-head { background: var(--p); color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .new-tx-btn { width: 100%; padding: 16px; background: var(--p); color: #fff; border: none; border-radius: 14px; font-size: 1.25rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .modal-x { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; border: none; background: rgba(0,0,0,0.08); color: var(--t); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5; }
+        .modal-x-light { background: rgba(255,255,255,0.25); color: #fff; }
+        .modal-stmt { position: relative; background: var(--card); border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); overflow: hidden; width: 100%; max-width: 480px; max-height: 90vh; display: flex; flex-direction: column; }
+        .stmt-scroll { overflow-y: auto; }
+        .stmt-head { background: var(--p); color: #fff; padding: 15px 55px 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
         .stmt-head h2 { font-size: 1.3rem; }
         .net-badge { font-size: 1rem; font-weight: bold; padding: 5px 12px; border-radius: 6px; color: #fff; }
         
@@ -91,7 +97,7 @@
 
         /* === الصفحات العائمة والمودالات === */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 300; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(3px); }
-        .modal { background: var(--card); border-radius: 16px; padding: 25px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; }
+        .modal { background: var(--card); border-radius: 16px; padding: 25px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; position: relative; }
         .modal h3 { margin-bottom: 20px; font-size: 1.3rem; text-align: center; }
         .modal p { line-height: 1.8; font-size: 1rem; color: var(--t); margin-bottom: 10px; }
         .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
@@ -106,13 +112,17 @@
         @media print {
             @page { margin: 5mm; size: A4 portrait; }
             html, body { height: auto !important; background: #fff !important; }
-            body > *:not(.statement) { display: none !important; }
-            .statement { 
-                display: block !important; position: static !important;
-                width: 100% !important; margin: 0 !important; padding: 0 !important;
-                box-shadow: none !important; border-radius: 0 !important; 
-                overflow: visible !important;
+            body > *:not(#statementModal) { display: none !important; }
+            #statementModal { 
+                position: static !important; display: block !important; 
+                background: none !important; backdrop-filter: none !important; padding: 0 !important;
             }
+            .modal-stmt { 
+                position: static !important; width: 100% !important; max-width: 100% !important;
+                max-height: none !important; margin: 0 !important; box-shadow: none !important; border-radius: 0 !important; 
+            }
+            .stmt-scroll { overflow: visible !important; max-height: none !important; }
+            .modal-x { display: none !important; }
             .stmt-actions { display: none !important; }
             .stmt-head { background: #2c3e50 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; padding: 10px 15px !important; }
             .stmt-table { font-size: 11pt !important; page-break-inside: avoid; }
@@ -150,41 +160,57 @@
     </div>
 </header>
 
-<div class="form-card">
-    <div class="name-wrap">
-        <input type="text" id="nameInput" placeholder="✏️ اسم العميل" autocomplete="off" oninput="showSuggestions(this.value)" onfocus="showSuggestions(this.value)">
-        <div class="suggestions" id="suggestionsBox"></div>
-    </div>
-    <textarea id="descInput" placeholder="📝 بيان العملية (اختياري)"></textarea>
-    <input type="date" id="dateInput" style="margin-bottom:12px;">
-    <div class="amount-row">
-        <div class="type-toggle debit" id="typeToggle" onclick="toggleType()">مدين</div>
-        <input type="number" id="amountInput" placeholder="المبلغ" inputmode="numeric">
-    </div>
-    <button class="save-btn" onclick="addTx()">حفظ ✓</button>
+<div style="padding:15px 15px 0;display:flex;gap:10px;">
+    <button class="new-tx-btn" style="flex:1;" onclick="openModal('addModal')">➕ عملية جديدة</button>
+    <button class="search-icon-btn" id="searchIconBtn" onclick="toggleSearchBox()">🔍</button>
 </div>
 
-<div class="search-wrap">
+<div class="search-wrap" id="searchWrap" style="display:none;">
     <input type="text" class="search-input" id="searchInput" placeholder="🔍 ابحث باسم العميل..." oninput="handleSearch()">
-</div>
-
-<div class="statement" id="statementCard">
-    <div class="stmt-head">
-        <h2 id="stmtName"></h2>
-        <span class="net-badge" id="stmtNet"></span>
-    </div>
-    <table class="stmt-table">
-        <thead><tr><th>التاريخ</th><th>البيان</th><th>مدين</th><th>دائن</th></tr></thead>
-        <tbody id="stmtBody"></tbody>
-    </table>
-    <div class="stmt-actions">
-        <button class="wa-btn" onclick="shareWA()">📤 واتساب</button>
-        <button class="pdf-btn" onclick="window.print()">🖨️ طباعة PDF</button>
-    </div>
 </div>
 
 <div class="list-title" id="listTitle">آخر العمليات</div>
 <div id="listContainer"></div>
+
+<!-- === نافذة عملية جديدة === -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal" style="position:relative;">
+        <button class="modal-x" onclick="closeModal('addModal')">✕</button>
+        <h3 style="margin-bottom:15px;padding-right:40px;">➕ عملية جديدة</h3>
+        <div class="name-wrap">
+            <input type="text" id="nameInput" placeholder="✏️ اسم العميل" autocomplete="off" oninput="showSuggestions(this.value)" onfocus="showSuggestions(this.value)">
+            <div class="suggestions" id="suggestionsBox"></div>
+        </div>
+        <textarea id="descInput" placeholder="📝 بيان العملية (اختياري)"></textarea>
+        <input type="date" id="dateInput" style="margin-bottom:12px;">
+        <div class="amount-row">
+            <div class="type-toggle debit" id="typeToggle" onclick="toggleType()">مدين</div>
+            <input type="number" id="amountInput" placeholder="المبلغ" inputmode="numeric">
+        </div>
+        <button class="save-btn" onclick="addTx()">حفظ ✓</button>
+    </div>
+</div>
+
+<!-- === نافذة كشف الحساب === -->
+<div class="modal-overlay" id="statementModal">
+    <div class="modal-stmt">
+        <button class="modal-x modal-x-light" onclick="closeModal('statementModal')">✕</button>
+        <div class="stmt-head">
+            <h2 id="stmtName"></h2>
+            <span class="net-badge" id="stmtNet"></span>
+        </div>
+        <div class="stmt-scroll">
+            <table class="stmt-table">
+                <thead><tr><th>التاريخ</th><th>البيان</th><th>مدين</th><th>دائن</th></tr></thead>
+                <tbody id="stmtBody"></tbody>
+            </table>
+        </div>
+        <div class="stmt-actions">
+            <button class="wa-btn" onclick="shareWA()">📤 واتساب</button>
+            <button class="pdf-btn" onclick="window.print()">🖨️ طباعة PDF</button>
+        </div>
+    </div>
+</div>
 
 <!-- === المودالات === -->
 <div class="modal-overlay" id="profileModal">
@@ -355,7 +381,7 @@
             const ob = balances[n.toLowerCase()] || 0;
             const obLabel = ob > 0 ? `رصيد سابق مدين ${ob.toLocaleString('ar-EG')}` : ob < 0 ? `رصيد سابق دائن ${Math.abs(ob).toLocaleString('ar-EG')}` : 'بدون رصيد سابق';
             return `<div style="padding:12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;">
-                <div style="cursor:pointer;flex:1;" onclick="closeModal('clientsModal');document.getElementById('searchInput').value='${n.replace(/'/g, "\\'")}';handleSearch();">
+                <div style="cursor:pointer;flex:1;" onclick="closeModal('clientsModal');viewClientStatement('${n.replace(/'/g, "\\'")}');">
                     <div style="font-size:1.1rem;font-weight:bold;">${n}</div>
                     <div style="font-size:0.85rem;color:#888;">${obLabel}</div>
                 </div>
@@ -438,16 +464,10 @@
     function save() { localStorage.setItem('df_txs', JSON.stringify(txs)); renderAll(); }
 
     // === البحث ===
-    function handleSearch() {
-        const q = document.getElementById('searchInput').value.trim().toLowerCase();
-        const card = document.getElementById('statementCard');
-        if (!q) { card.style.display = 'none'; document.getElementById('listTitle').textContent = 'آخر العمليات'; renderList(txs); currentClient = ''; return; }
-        const matched = txs.filter(t => t.name.toLowerCase().includes(q));
-        if (!matched.length) { card.style.display = 'none'; document.getElementById('listTitle').textContent = 'لا توجد نتائج'; renderList([]); currentClient = ''; return; }
-        currentClient = matched[0].name;
-        const cTxs = txs.filter(t => t.name.toLowerCase() === currentClient.toLowerCase())
+    function buildStatementRows(name) {
+        const cTxs = txs.filter(t => t.name.toLowerCase() === name.toLowerCase())
             .slice().sort((a,b) => (a.date||'').localeCompare(b.date||'') || a.id - b.id);
-        const opening = balances[currentClient.toLowerCase()] || 0;
+        const opening = balances[name.toLowerCase()] || 0;
         let d = opening > 0 ? opening : 0, c = opening < 0 ? -opening : 0, rows = '';
         if (opening !== 0) {
             rows += `<tr><td>—</td><td>رصيد سابق</td><td class="${opening>0?'td-d':''}">${opening>0?Math.abs(opening).toLocaleString('ar-EG'):'-'}</td><td class="${opening<0?'td-c':''}">${opening<0?Math.abs(opening).toLocaleString('ar-EG'):'-'}</td></tr>`;
@@ -457,14 +477,59 @@
             const descHtml = t.desc ? `<br><span class="desc-cell">📝 ${t.desc}</span>` : '';
             rows += `<tr><td>${fmtDate(t.date)}</td><td><b class="${isD?'td-d':'td-c'}">${isD?'مدين':'دائن'}</b>${descHtml}</td><td class="${isD?'td-d':''}">${isD?t.amount.toLocaleString('ar-EG'):'-'}</td><td class="${!isD?'td-c':''}">${!isD?t.amount.toLocaleString('ar-EG'):'-'}</td></tr>`;
         });
-        const net = d - c;
+        return { rows, net: d - c, cTxs };
+    }
+
+    function openStatementFor(name) {
+        if (!name) return;
+        currentClient = name;
+        const { rows, net } = buildStatementRows(name);
         const ne = document.getElementById('stmtNet');
-        document.getElementById('stmtName').textContent = currentClient;
+        document.getElementById('stmtName').textContent = name;
         document.getElementById('stmtBody').innerHTML = rows;
         if (net > 0) { ne.textContent = `صافي مدين: ${net.toLocaleString('ar-EG')}`; ne.className = 'net-badge b-d'; ne.style.background = ''; }
         else if (net < 0) { ne.textContent = `صافي دائن: ${Math.abs(net).toLocaleString('ar-EG')}`; ne.className = 'net-badge b-c'; ne.style.background = ''; }
         else { ne.textContent = 'الصافي: 0'; ne.className = 'net-badge'; ne.style.background = '#95a5a6'; }
-        card.style.display = 'block'; document.getElementById('listTitle').textContent = `عمليات ${currentClient}`; renderList(cTxs.slice().reverse());
+        document.getElementById('statementModal').style.display = 'flex';
+    }
+
+    function viewClientStatement(name) { openStatementFor(name); }
+
+    function toggleSearchBox() {
+        const wrap = document.getElementById('searchWrap');
+        const btn = document.getElementById('searchIconBtn');
+        const isOpen = wrap.style.display === 'block';
+        if (isOpen) {
+            wrap.style.display = 'none';
+            btn.classList.remove('active');
+            document.getElementById('searchInput').value = '';
+            handleSearch();
+        } else {
+            wrap.style.display = 'block';
+            btn.classList.add('active');
+            document.getElementById('searchInput').focus();
+        }
+    }
+
+    function handleSearch() {
+        const q = document.getElementById('searchInput').value.trim().toLowerCase();
+        if (!q) {
+            closeModal('statementModal');
+            document.getElementById('listTitle').textContent = 'آخر العمليات';
+            const sorted = txs.slice().sort((a,b) => (b.date||'').localeCompare(a.date||'') || b.id - a.id);
+            renderList(sorted); currentClient = ''; return;
+        }
+        const matched = txs.filter(t => t.name.toLowerCase().includes(q));
+        if (!matched.length) {
+            closeModal('statementModal');
+            document.getElementById('listTitle').textContent = 'لا توجد نتائج';
+            renderList([]); currentClient = ''; return;
+        }
+        const name = matched[0].name;
+        const { cTxs } = buildStatementRows(name);
+        document.getElementById('listTitle').textContent = `عمليات ${name}`;
+        renderList(cTxs.slice().reverse());
+        openStatementFor(name);
     }
 
     // === واتساب الذكي (Double Check) ===
@@ -535,7 +600,8 @@
         if (!items.length) { el.innerHTML = '<div class="empty">لا توجد عمليات ✍️</div>'; return; }
         el.innerHTML = items.map(t => {
             const descHtml = t.desc ? `<div class="tx-desc">📝 ${t.desc}</div>` : '';
-            return `<div class="tx-item ${t.type}"><div><div class="tx-name">${t.name}</div><div class="tx-date">${fmtDate(t.date)}</div>${descHtml}</div><div style="display:flex;align-items:center;"><span class="tx-amount ${t.type}">${t.amount.toLocaleString('ar-EG')}</span><button class="act-btn" onclick="openEdit(${t.id})">✏️</button><button class="act-btn" onclick="deleteTx(${t.id})">🗑️</button></div></div>`;
+            const safeName = t.name.replace(/'/g, "\\'");
+            return `<div class="tx-item ${t.type}"><div><div class="tx-name" style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted;" onclick="viewClientStatement('${safeName}')">${t.name}</div><div class="tx-date">${fmtDate(t.date)}</div>${descHtml}</div><div style="display:flex;align-items:center;"><span class="tx-amount ${t.type}">${t.amount.toLocaleString('ar-EG')}</span><button class="act-btn" onclick="openEdit(${t.id})">✏️</button><button class="act-btn" onclick="deleteTx(${t.id})">🗑️</button></div></div>`;
         }).join('');
     }
 </script>
